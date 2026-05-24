@@ -1,0 +1,10 @@
+[
+  {"code": "sad",        "name_ru": "Грустно",       "emoji": "😢", "description": "Хочется тёплых, человечных историй"},
+  {"code": "anxious",    "name_ru": "Тревожно",      "emoji": "😰", "description": "Нужно убежать в другой мир"},
+  {"code": "happy",      "name_ru": "Радостно",      "emoji": "😄", "description": "Лёгкие и светлые книги"},
+  {"code": "bored",      "name_ru": "Скучно",        "emoji": "🥱", "description": "Хочется чего-то захватывающего"},
+  {"code": "nostalgic",  "name_ru": "Ностальгия",    "emoji": "🍂", "description": "Книги о прошлом и взрослении"},
+  {"code": "motivated",  "name_ru": "Подъём сил",    "emoji": "🚀", "description": "Хочется действовать и расти"},
+  {"code": "curious",    "name_ru": "Любопытно",     "emoji": "🔎", "description": "Узнавать новое о мире и людях"},
+  {"code": "romantic",   "name_ru": "Романтично",    "emoji": "💕", "description": "Истории о любви и чувствах"}
+]

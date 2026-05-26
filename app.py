@@ -3,18 +3,12 @@ from pathlib import Path
 
 from flask import Flask, render_template
 
-from models import db
+from models import Mood, db
 
 BASE_DIR = Path(__file__).parent
 
 
 def create_app() -> Flask:
-    """Application factory: build and configure the Flask app, then return it.
-
-    Using a factory (instead of a module-level ``app = Flask(...)``) lets tests
-    create a fresh, isolated app with their own config, and keeps importing this
-    module free of side effects.
-    """
     app = Flask(__name__)
     app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "dev-secret-change-me")
 
@@ -31,7 +25,13 @@ def create_app() -> Flask:
 def register_routes(app: Flask) -> None:
     @app.route("/")
     def index():
-        return render_template("index.html")
+        moods = _all_moods()
+        return render_template("index.html", moods=moods)
+
+
+def _all_moods():
+    """All moods in a stable order (by id), for the home page and filters."""
+    return Mood.query.order_by(Mood.id).all()
 
 
 app = create_app()

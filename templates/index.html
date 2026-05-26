@@ -2,10 +2,20 @@
 {% block title %}Главная · Книги по настроению{% endblock %}
 
 {% block content %}
-<div class="text-center py-5">
-  <h1 class="display-5">📚 Книги по настроению</h1>
-  <p class="lead text-muted">
-    Подберём книгу под ваше настроение. Скоро здесь появится выбор настроения.
-  </p>
+<div class="text-center mb-4">
+  <h1 class="display-5 mb-2">Какое у вас настроение?</h1>
+  <p class="text-muted">Выберите состояние — скоро подберём пять книг.</p>
+</div>
+
+<div class="row g-3">
+  {% for mood in moods %}
+    <div class="col-6 col-md-3">
+      <div class="mood-card h-100 border rounded text-start p-3 bg-white">
+        <div class="display-6">{{ mood.emoji }}</div>
+        <div class="fw-bold">{{ mood.name_ru }}</div>
+        <div class="small text-muted">{{ mood.description }}</div>
+      </div>
+    </div>
+  {% endfor %}
 </div>
 {% endblock %}

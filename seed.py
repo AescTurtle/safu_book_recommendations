@@ -24,8 +24,6 @@ def init_db(app):
             print("Database already seeded - skipping.")
             return
 
-        # Build moods first and keep a code -> Mood lookup so we can attach the
-        # right Mood objects to each book by its mood codes.
         moods_by_code: dict[str, Mood] = {}
         for item in json.loads((DATA_DIR / "moods.json").read_text(encoding="utf-8")):
             mood = Mood(
@@ -36,8 +34,6 @@ def init_db(app):
             )
             db.session.add(mood)
             moods_by_code[mood.code] = mood
-        # flush() sends the INSERTs to the DB (so moods get ids) but does NOT
-        # commit the transaction yet. We need the ids to link books to moods.
         db.session.flush()
 
         for item in json.loads((DATA_DIR / "books.json").read_text(encoding="utf-8")):
@@ -64,7 +60,6 @@ def init_db(app):
         )
         db.session.add(admin)
 
-        # commit() writes everything permanently in one transaction.
         db.session.commit()
         print(f"Seeded {Mood.query.count()} moods, {Book.query.count()} books, admin user created.")
 

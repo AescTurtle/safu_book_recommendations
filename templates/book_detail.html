@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}{{ book.title }}{% endblock %}
+
+{% block content %}
+<a href="{{ url_for('books_list') }}" class="text-muted small">← К каталогу</a>
+<h1 class="h3 mt-2 mb-1">{{ book.title }}</h1>
+<p class="text-muted">{{ book.author }}{% if book.year %}, {{ book.year }}{% endif %}</p>
+
+<div class="mb-3">
+  {% for m in book.moods %}
+    <span class="badge bg-secondary">{{ m.emoji }} {{ m.name_ru }}</span>
+  {% endfor %}
+</div>
+
+<p>{{ book.description }}</p>
+
+<hr>
+<h2 class="h5">Оценки</h2>
+
+{# The rating form and reviews list are added in a later commit. #}
+{% if ratings %}
+  <ul class="list-group">
+    {% for r in ratings %}
+      <li class="list-group-item">
+        <span class="badge bg-warning text-dark">{{ r.rating }}★</span>
+        {% if r.comment %}<div class="mt-1">{{ r.comment }}</div>{% endif %}
+      </li>
+    {% endfor %}
+  </ul>
+{% else %}
+  <p class="text-muted">Пока нет оценок.</p>
+{% endif %}
+{% endblock %}

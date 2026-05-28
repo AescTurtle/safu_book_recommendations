@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Каталог книг{% endblock %}
+
+{% block content %}
+<h1 class="h3 mb-3">Каталог книг</h1>
+
+<form method="get" class="row g-2 mb-4">
+  <div class="col-md-5">
+    <input name="q" value="{{ q }}" class="form-control" placeholder="Поиск по названию или автору">
+  </div>
+  <div class="col-md-4">
+    <select name="mood" class="form-select">
+      <option value="">— все настроения —</option>
+      {% for m in moods %}
+        <option value="{{ m.code }}" {% if selected_mood == m.code %}selected{% endif %}>
+          {{ m.emoji }} {{ m.name_ru }}
+        </option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-3 d-grid">
+    <button class="btn btn-primary" type="submit">Фильтр</button>
+  </div>
+</form>
+
+{% if books %}
+  <div class="row g-3">
+    {% for b in books %}
+      <div class="col-md-6 col-lg-4">
+        <div class="card h-100">
+          <div class="card-body">
+            <h6 class="card-title mb-1">
+              <a href="{{ url_for('book_detail', book_id=b.id) }}">{{ b.title }}</a>
+            </h6>
+            <p class="text-muted small mb-2">{{ b.author }}{% if b.year %}, {{ b.year }}{% endif %}</p>
+            <div>
+              {% for m in b.moods %}
+                <span class="badge bg-secondary">{{ m.emoji }} {{ m.name_ru }}</span>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="alert alert-info">Ничего не найдено.</div>
+{% endif %}
+{% endblock %}

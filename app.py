@@ -1,11 +1,23 @@
 import os
 from pathlib import Path
+from urllib.parse import urlparse
 
-from flask import Flask, render_template, request
+from flask import Flask, flash, redirect, render_template, request, url_for
+from flask_login import (
+    LoginManager,
+    current_user,
+    login_required,
+    login_user,
+    logout_user,
+)
+from flask_wtf.csrf import CSRFProtect
+from werkzeug.security import check_password_hash, generate_password_hash
 
-from models import Book, Mood, db
+from models import Book, Mood, User, db
 
 BASE_DIR = Path(__file__).parent
+
+csrf = CSRFProtect()
 
 
 def create_app() -> Flask:
@@ -17,6 +29,16 @@ def create_app() -> Flask:
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
     db.init_app(app)
+    csrf.init_app(app)
+
+    login_manager = LoginManager(app)
+    login_manager.login_view = "login"
+    login_manager.login_message = "Войдите, чтобы продолжить."
+    login_manager.login_message_category = "warning"
+
+    @login_manager.user_loader
+    def load_user(user_id: str):
+        return db.session.get(User, int(user_id))
 
     register_routes(app)
     return app
@@ -27,6 +49,57 @@ def register_routes(app: Flask) -> None:
     def index():
         moods = _all_moods()
         return render_template("index.html", moods=moods)
+
+    @app.route("/register", methods=["GET", "POST"])
+    def register():
+        if current_user.is_authenticated:
+            return redirect(url_for("index"))
+        if request.method == "POST":
+            username = (request.form.get("username") or "").strip()
+            password = request.form.get("password") or ""
+            if not username or not password:
+                flash("Введите имя пользователя и пароль", "danger")
+            elif len(password) < 4:
+                flash("Пароль должен быть не короче 4 символов", "danger")
+            elif (User.query.filter_by(username=username).first()):
+                flash("Такое имя уже занято.", "danger")
+            else:
+                user = User(
+                    username=username,
+                    password_hash=generate_password_hash(password),
+                    role="user",
+                )
+                db.session.add(user)
+                db.session.commit()
+                login_user(user)
+                flash("Регистрация прошла успешно!", "success")
+                return redirect(url_for("index"))
+        return render_template("register.html")
+
+    @app.route("/login", methods=["GET", "POST"])
+    def login():
+        if current_user.is_authenticated:
+            return redirect(url_for("index"))
+        if request.method == "POST":
+            username = (request.form.get("username") or "").strip()
+            password = request.form.get("password") or ""
+            user = User.query.filter_by(username=username).first()
+            if user and check_password_hash(user.password_hash, password):
+                login_user(user)
+                flash("Здравствуйте!", "success")
+                next_url = request.args.get("next", "")
+                if urlparse(next_url).netloc:
+                    next_url = ""
+                return redirect(next_url or url_for("index"))
+            flash("Неверное имя пользователя или пароль.", "danger")
+        return render_template("login.html")
+
+    @app.route("/logout", methods=["POST"])
+    @login_required
+    def logout():
+        logout_user()
+        flash("Вы вышли из системы.", "info")
+        return redirect(url_for("index"))
 
     @app.route("/books")
     def books_list():
@@ -61,7 +134,6 @@ def register_routes(app: Flask) -> None:
 
 
 def _all_moods():
-    """All moods in a stable order (by id), for the home page and filters."""
     return Mood.query.order_by(Mood.id).all()
 
 

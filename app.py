@@ -11,9 +11,10 @@ from flask_login import (
     logout_user,
 )
 from flask_wtf.csrf import CSRFProtect
+from sqlalchemy import func
 from werkzeug.security import check_password_hash, generate_password_hash
 
-from models import Book, Mood, User, db
+from models import Book, Mood, Recommendation, User, db
 
 BASE_DIR = Path(__file__).parent
 
@@ -100,6 +101,30 @@ def register_routes(app: Flask) -> None:
         logout_user()
         flash("Вы вышли из системы.", "info")
         return redirect(url_for("index"))
+
+    @app.route("/recommend", methods=["POST"])
+    @login_required
+    def recommend():
+        mood_id = request.form.get("mood_id", type=int)
+        mood = db.session.get(Mood, mood_id)
+        if mood is None:
+            flash("Выберите настроение.", "warning")
+            return redirect(url_for("index"))
+
+        books = (
+            Book.query
+            .join(Book.moods)
+            .filter(Mood.id == mood.id)
+            .order_by(func.random())
+            .limit(5)
+            .all()
+        )
+
+        rec = Recommendation(user_id=current_user.id, mood_id=mood.id)
+        db.session.add(rec)
+        db.session.commit()
+
+        return render_template("recommend.html", mood=mood, books=books)
 
     @app.route("/books")
     def books_list():

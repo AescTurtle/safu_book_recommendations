@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Рекомендации{% endblock %}
+
+{% block content %}
+<h1 class="h3 mb-3">
+  {{ mood.emoji }} Книги для настроения «{{ mood.name_ru }}»
+</h1>
+<p class="text-muted">{{ mood.description }}</p>
+
+{% if books %}
+  <div class="row g-3">
+    {% for b in books %}
+      <div class="col-md-6">
+        <div class="card h-100">
+          <div class="card-body">
+            <h5 class="card-title mb-1">
+              <a href="{{ url_for('book_detail', book_id=b.id) }}">{{ b.title }}</a>
+            </h5>
+            <p class="text-muted small mb-2">{{ b.author }}{% if b.year %}, {{ b.year }}{% endif %}</p>
+            <p class="card-text">{{ b.description }}</p>
+            <div>
+              {% for m in b.moods %}
+                <span class="badge bg-secondary">{{ m.emoji }} {{ m.name_ru }}</span>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="alert alert-warning">Для этого настроения пока нет книг.</div>
+{% endif %}
+
+<div class="mt-4">
+  <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">← Другое настроение</a>
+</div>
+{% endblock %}

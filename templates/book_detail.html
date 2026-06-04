@@ -15,14 +15,40 @@
 <p>{{ book.description }}</p>
 
 <hr>
-<h2 class="h5">Оценки</h2>
+<h2 class="h5">
+  Оценки
+  {% if avg %}<small class="text-muted">— средняя {{ '%.1f' % avg }} / 5</small>{% endif %}
+</h2>
 
-{# The rating form and reviews list are added in a later commit. #}
+{% if current_user.is_authenticated %}
+  <form method="post" action="{{ url_for('rate_book', book_id=book.id) }}" class="card card-body my-3">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <p class="mb-2">
+      {% if my_rating %}Ваша оценка: <strong>{{ my_rating.rating }}/5</strong>. Изменить:{% else %}Поставить оценку:{% endif %}
+    </p>
+    <div class="d-flex gap-2 mb-2">
+      {% for n in [1,2,3,4,5] %}
+        <input type="radio" class="btn-check" name="rating" id="rating{{ n }}" value="{{ n }}"
+               {% if my_rating and my_rating.rating == n %}checked{% endif %} required>
+        <label class="btn btn-outline-warning" for="rating{{ n }}">{{ n }}★</label>
+      {% endfor %}
+    </div>
+    <textarea name="comment" class="form-control mb-2" rows="2" placeholder="Комментарий (необязательно)">{{ my_rating.comment if my_rating else '' }}</textarea>
+    <button class="btn btn-primary align-self-start" type="submit">Сохранить</button>
+  </form>
+{% else %}
+  <p class="small text-muted">
+    <a href="{{ url_for('login') }}">Войдите</a>, чтобы оценить книгу.
+  </p>
+{% endif %}
+
 {% if ratings %}
   <ul class="list-group">
     {% for r in ratings %}
       <li class="list-group-item">
+        <strong>{{ r.user.username }}</strong>
         <span class="badge bg-warning text-dark">{{ r.rating }}★</span>
+        <span class="text-muted small">{{ r.created_at.strftime('%Y-%m-%d %H:%M') }}</span>
         {% if r.comment %}<div class="mt-1">{{ r.comment }}</div>{% endif %}
       </li>
     {% endfor %}

@@ -12,9 +12,10 @@ from flask_login import (
 )
 from flask_wtf.csrf import CSRFProtect
 from sqlalchemy import func
+from sqlalchemy.orm import joinedload
 from werkzeug.security import check_password_hash, generate_password_hash
 
-from models import Book, Mood, Recommendation, User, db
+from models import Book, Mood, Rating, Recommendation, User, db
 
 BASE_DIR = Path(__file__).parent
 
@@ -150,8 +151,56 @@ def register_routes(app: Flask) -> None:
     @app.route("/books/<int:book_id>")
     def book_detail(book_id):
         book = db.get_or_404(Book, book_id)
-        ratings = []
-        return render_template("book_detail.html", book=book, ratings=ratings)
+        # joinedload(Rating.user) fetches each rating's author in the SAME query
+        # (a JOIN) instead of one extra query per rating — avoids the N+1 problem.
+        ratings = (
+            Rating.query.filter_by(book_id=book.id)
+            .options(joinedload(Rating.user))
+            .order_by(Rating.created_at.desc())
+            .all()
+        )
+        avg = (sum(r.rating for r in ratings) / len(ratings)) if ratings else None
+        # The current user's own rating (if any), to pre-fill the form.
+        my_rating = None
+        if current_user.is_authenticated:
+            my_rating = Rating.query.filter_by(
+                book_id=book.id, user_id=current_user.id
+            ).first()
+        return render_template(
+            "book_detail.html",
+            book=book,
+            ratings=ratings,
+            avg=avg,
+            my_rating=my_rating,
+        )
+
+    @app.route("/books/<int:book_id>/rate", methods=["POST"])
+    @login_required
+    def rate_book(book_id):
+        book = db.get_or_404(Book, book_id)
+        value = request.form.get("rating", type=int) or 0
+        comment = (request.form.get("comment") or "").strip()
+        if not 1 <= value <= 5:
+            flash("Оценка должна быть от 1 до 5.", "danger")
+            return redirect(url_for("book_detail", book_id=book.id))
+
+        existing = Rating.query.filter_by(book_id=book.id, user_id=current_user.id).first()
+        if existing:
+            existing.rating = value
+            existing.comment = comment
+        else:
+            db.session.add(
+                Rating(
+                    book_id=book.id,
+                    user_id=current_user.id,
+                    rating=value,
+                    comment=comment,
+                )
+            )
+        db.session.commit()
+
+        flash("Спасибо за оценку!", "success")
+        return redirect(url_for("book_detail", book_id=book.id))
     
     @app.errorhandler(404)
     def not_found(e):

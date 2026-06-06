@@ -151,8 +151,6 @@ def register_routes(app: Flask) -> None:
     @app.route("/books/<int:book_id>")
     def book_detail(book_id):
         book = db.get_or_404(Book, book_id)
-        # joinedload(Rating.user) fetches each rating's author in the SAME query
-        # (a JOIN) instead of one extra query per rating — avoids the N+1 problem.
         ratings = (
             Rating.query.filter_by(book_id=book.id)
             .options(joinedload(Rating.user))
@@ -160,7 +158,6 @@ def register_routes(app: Flask) -> None:
             .all()
         )
         avg = (sum(r.rating for r in ratings) / len(ratings)) if ratings else None
-        # The current user's own rating (if any), to pre-fill the form.
         my_rating = None
         if current_user.is_authenticated:
             my_rating = Rating.query.filter_by(
@@ -202,6 +199,25 @@ def register_routes(app: Flask) -> None:
         flash("Спасибо за оценку!", "success")
         return redirect(url_for("book_detail", book_id=book.id))
     
+    @app.route("/dashboard")
+    @login_required
+    def dashboard():
+        recs = (
+            Recommendation.query.filter_by(user_id=current_user.id)
+            .options(joinedload(Recommendation.mood))
+            .order_by(Recommendation.created_at.desc())
+            .limit(50)
+            .all()
+        )
+        ratings = (
+            Rating.query.filter_by(user_id=current_user.id)
+            .options(joinedload(Rating.book))
+            .order_by(Rating.created_at.desc())
+            .limit(100)
+            .all()
+        )
+        return render_template("dashboard.html", recs=recs, ratings=ratings)
+
     @app.errorhandler(404)
     def not_found(e):
         return render_template("404.html"), 404

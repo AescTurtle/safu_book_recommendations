@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Мой кабинет{% endblock %}
+
+{% block content %}
+<h1 class="h3 mb-3">Мой кабинет — {{ current_user.username }}</h1>
+
+<div class="row g-4">
+  <div class="col-md-6">
+    <h2 class="h5">История рекомендаций</h2>
+    {% if recs %}
+      <ul class="list-group">
+        {% for r in recs %}
+          <li class="list-group-item d-flex justify-content-between">
+            <span>{{ r.mood.emoji }} {{ r.mood.name_ru }}</span>
+            <span class="text-muted small">{{ r.created_at.strftime('%Y-%m-%d %H:%M') }}</span>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="text-muted">
+        Вы ещё не получали рекомендаций.
+        <a href="{{ url_for('index') }}">Выберите настроение →</a>
+      </p>
+    {% endif %}
+  </div>
+
+  {# ---- Right column: my ratings ---- #}
+  <div class="col-md-6">
+    <h2 class="h5">Мои оценки</h2>
+    {% if ratings %}
+      <ul class="list-group">
+        {% for r in ratings %}
+          <li class="list-group-item">
+            <a href="{{ url_for('book_detail', book_id=r.book.id) }}">{{ r.book.title }}</a>
+            <span class="badge bg-warning text-dark">{{ r.rating }}★</span>
+            <div class="text-muted small">{{ r.created_at.strftime('%Y-%m-%d %H:%M') }}</div>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="text-muted">Вы ещё не оценивали книги.</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

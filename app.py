@@ -1,8 +1,9 @@
 import os
+from functools import wraps
 from pathlib import Path
 from urllib.parse import urlparse
 
-from flask import Flask, flash, redirect, render_template, request, url_for
+from flask import Flask, abort, flash, redirect, render_template, request, url_for
 from flask_login import (
     LoginManager,
     current_user,
@@ -44,6 +45,22 @@ def create_app() -> Flask:
 
     register_routes(app)
     return app
+
+
+def admin_required(view):
+    """Like @login_required, but also requires current_user to be an admin.
+
+    @wraps copies the wrapped view's name/metadata onto the wrapper so Flask
+    still sees a uniquely-named function for its url map.
+    """
+    @wraps(view)
+    @login_required
+    def wrapped(*args, **kwargs):
+        if not current_user.is_admin:
+            abort(403)
+        return view(*args, **kwargs)
+
+    return wrapped
 
 
 def register_routes(app: Flask) -> None:
@@ -218,6 +235,64 @@ def register_routes(app: Flask) -> None:
         )
         return render_template("dashboard.html", recs=recs, ratings=ratings)
 
+    # ---------- Admin ----------
+
+    @app.route("/admin")
+    @admin_required
+    def admin_index():
+        stats = {
+            "users": User.query.count(),
+            "books": Book.query.count(),
+            "moods": Mood.query.count(),
+            "recommendations": Recommendation.query.count(),
+            "ratings": Rating.query.count(),
+        }
+        return render_template("admin/index.html", stats=stats)
+
+    @app.route("/admin/books")
+    @admin_required
+    def admin_books():
+        books = Book.query.options(joinedload(Book.moods)).order_by(Book.title).all()
+        return render_template("admin/book_list.html", books=books)
+
+    @app.route("/admin/books/new", methods=["GET", "POST"])
+    @admin_required
+    def admin_book_new():
+        moods = _all_moods()
+        if request.method == "POST":
+            book = Book()
+            if _apply_book_form(book):
+                db.session.add(book)
+                db.session.commit()
+                flash("Книга добавлена.", "success")
+                return redirect(url_for("admin_books"))
+        return render_template("admin/book_form.html", book=None, moods=moods)
+
+    @app.route("/admin/books/<int:book_id>/edit", methods=["GET", "POST"])
+    @admin_required
+    def admin_book_edit(book_id):
+        book = db.get_or_404(Book, book_id)
+        moods = _all_moods()
+        if request.method == "POST":
+            if _apply_book_form(book):
+                db.session.commit()
+                flash("Книга обновлена.", "success")
+                return redirect(url_for("admin_books"))
+        return render_template("admin/book_form.html", book=book, moods=moods)
+
+    @app.route("/admin/books/<int:book_id>/delete", methods=["POST"])
+    @admin_required
+    def admin_book_delete(book_id):
+        book = db.get_or_404(Book, book_id)
+        db.session.delete(book)
+        db.session.commit()
+        flash("Книга удалена.", "info")
+        return redirect(url_for("admin_books"))
+
+    @app.errorhandler(403)
+    def forbidden(e):
+        return render_template("403.html"), 403
+
     @app.errorhandler(404)
     def not_found(e):
         return render_template("404.html"), 404
@@ -225,6 +300,38 @@ def register_routes(app: Flask) -> None:
 
 def _all_moods():
     return Mood.query.order_by(Mood.id).all()
+
+
+def _form_str(key: str, default: str = "") -> str:
+    return (request.form.get(key) or default).strip()
+
+
+def _apply_book_form(book: Book) -> bool:
+    """Read the book form into `book`. Returns True on success, False (with a
+    flashed error) on validation failure. Shared by the new and edit routes."""
+    title = _form_str("title")
+    author = _form_str("author")
+    if not title or not author:
+        flash("Название и автор обязательны.", "danger")
+        return False
+
+    cover_url = _form_str("cover_url") or None
+    if cover_url and not (cover_url.startswith("http://") or cover_url.startswith("https://")):
+        flash("URL обложки должен начинаться с http:// или https://", "danger")
+        return False
+
+    book.title = title
+    book.author = author
+    year_raw = _form_str("year")
+    book.year = int(year_raw) if year_raw.isdigit() else None
+    book.description = _form_str("description")
+    book.language = _form_str("language", "ru")
+    book.cover_url = cover_url
+
+    # Checkboxes send a list of selected mood ids; replace the book's moods.
+    selected_ids = {int(x) for x in request.form.getlist("mood_ids") if x.isdigit()}
+    book.moods = Mood.query.filter(Mood.id.in_(selected_ids)).all() if selected_ids else []
+    return True
 
 
 app = create_app()

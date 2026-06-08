@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Редактирование книги' if book else 'Новая книга' }}{% endblock %}
+
+{% block content %}
+<h1 class="h3 mb-3">{{ 'Редактирование книги' if book else 'Новая книга' }}</h1>
+
+<form method="post" class="card card-body">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="mb-3">
+    <label class="form-label">Название</label>
+    <input name="title" class="form-control" value="{{ book.title if book else '' }}" required>
+  </div>
+  <div class="row g-3">
+    <div class="col-md-7 mb-3">
+      <label class="form-label">Автор</label>
+      <input name="author" class="form-control" value="{{ book.author if book else '' }}" required>
+    </div>
+    <div class="col-md-3 mb-3">
+      <label class="form-label">Год</label>
+      <input name="year" type="number" class="form-control" value="{{ book.year if book and book.year else '' }}">
+    </div>
+    <div class="col-md-2 mb-3">
+      <label class="form-label">Язык</label>
+      <input name="language" class="form-control" value="{{ book.language if book else 'ru' }}">
+    </div>
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Описание</label>
+    <textarea name="description" rows="3" class="form-control">{{ book.description if book else '' }}</textarea>
+  </div>
+  <div class="mb-3">
+    <label class="form-label">URL обложки (необязательно)</label>
+    <input name="cover_url" class="form-control" value="{{ book.cover_url if book and book.cover_url else '' }}">
+  </div>
+  <div class="mb-3">
+    <label class="form-label d-block">Настроения</label>
+    {% set selected_ids = book.moods|map(attribute='id')|list if book else [] %}
+    {% for m in moods %}
+      <div class="form-check form-check-inline">
+        <input class="form-check-input" type="checkbox" name="mood_ids" value="{{ m.id }}"
+               id="mood-{{ m.id }}"
+               {% if m.id in selected_ids %}checked{% endif %}>
+        <label class="form-check-label" for="mood-{{ m.id }}">{{ m.emoji }} {{ m.name_ru }}</label>
+      </div>
+    {% endfor %}
+  </div>
+
+  <div class="d-flex gap-2">
+    <button class="btn btn-primary" type="submit">Сохранить</button>
+    <a href="{{ url_for('admin_books') }}" class="btn btn-outline-secondary">Отмена</a>
+  </div>
+</form>
+{% endblock %}

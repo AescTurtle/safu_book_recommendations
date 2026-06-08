@@ -21,6 +21,9 @@
         <li class="nav-item"><a class="nav-link" href="{{ url_for('books_list') }}">Каталог</a></li>
         {% if current_user.is_authenticated %}
           <li class="nav-item"><a class="nav-link" href="{{ url_for('dashboard') }}">Мой кабинет</a></li>
+          {% if current_user.is_admin %}
+            <li class="nav-item"><a class="nav-link" href="{{ url_for('admin_index') }}">Админка</a></li>
+          {% endif %}
         {% endif %}
       </ul>
       <ul class="navbar-nav">

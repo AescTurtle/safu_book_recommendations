@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Админка{% endblock %}
+
+{% block content %}
+<h1 class="h3 mb-3">Панель администратора</h1>
+
+<div class="row g-3 mb-4">
+  {% for label, value in [
+      ('Пользователи', stats.users),
+      ('Книги', stats.books),
+      ('Настроения', stats.moods),
+      ('Рекомендаций выдано', stats.recommendations),
+      ('Оценок', stats.ratings),
+  ] %}
+    <div class="col-md-4">
+      <div class="card card-body text-center">
+        <div class="text-muted small">{{ label }}</div>
+        <div class="h3 mb-0">{{ value }}</div>
+      </div>
+    </div>
+  {% endfor %}
+</div>
+
+<div class="d-flex flex-wrap gap-2">
+  <a href="{{ url_for('admin_books') }}" class="btn btn-primary">Управление книгами</a>
+</div>
+{% endblock %}

@@ -1,9 +1,20 @@
+import csv
+import io
 import os
 from functools import wraps
 from pathlib import Path
 from urllib.parse import urlparse
 
-from flask import Flask, abort, flash, redirect, render_template, request, url_for
+from flask import (
+    Flask,
+    Response,
+    abort,
+    flash,
+    redirect,
+    render_template,
+    request,
+    url_for,
+)
 from flask_login import (
     LoginManager,
     current_user,
@@ -289,6 +300,33 @@ def register_routes(app: Flask) -> None:
         flash("Книга удалена.", "info")
         return redirect(url_for("admin_books"))
 
+    @app.route("/admin/export/recommendations.csv")
+    @admin_required
+    def export_recommendations():
+        recs = (
+            Recommendation.query
+            .options(joinedload(Recommendation.user), joinedload(Recommendation.mood))
+            .order_by(Recommendation.created_at.desc())
+            .all()
+        )
+        data = [
+            [r.id, r.created_at.isoformat(timespec="seconds"), r.user.username, r.mood.code, r.mood.name_ru]
+            for r in recs
+        ]
+        csv_text = _build_csv(["id", "created_at", "user", "mood_code", "mood_ru"], data)
+        return _csv_response(csv_text, "recommendations.csv")
+
+    @app.route("/admin/export/books.csv")
+    @admin_required
+    def export_books():
+        books = Book.query.options(joinedload(Book.moods)).order_by(Book.title).all()
+        data = [
+            [b.id, b.title, b.author, b.year or "", b.language, ";".join(m.code for m in b.moods)]
+            for b in books
+        ]
+        csv_text = _build_csv(["id", "title", "author", "year", "language", "moods"], data)
+        return _csv_response(csv_text, "books.csv")
+
     @app.errorhandler(403)
     def forbidden(e):
         return render_template("403.html"), 403
@@ -332,6 +370,25 @@ def _apply_book_form(book: Book) -> bool:
     selected_ids = {int(x) for x in request.form.getlist("mood_ids") if x.isdigit()}
     book.moods = Mood.query.filter(Mood.id.in_(selected_ids)).all() if selected_ids else []
     return True
+
+
+def _build_csv(headers: list, rows: list) -> str:
+    """Build CSV text in memory using the stdlib csv writer."""
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+    writer.writerow(headers)
+    writer.writerows(rows)
+    return buf.getvalue()
+
+
+def _csv_response(text: str, filename: str) -> Response:
+    """Wrap CSV text in a downloadable response. The leading BOM (﻿) makes
+    Excel open the file as UTF-8 so Cyrillic text isn't garbled."""
+    return Response(
+        "﻿" + text,
+        mimetype="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 app = create_app()

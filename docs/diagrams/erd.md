@@ -9,7 +9,8 @@ erDiagram
     moods ||--o{ recommendations : "по настроению"
     users ||--o{ ratings : "ставит"
     books ||--o{ ratings : "получает"
-    books }o--o{ moods : "помечена (book_moods)"
+    books ||--o{ book_moods : "помечена"
+    moods ||--o{ book_moods : "включает"
 
     users {
         int     id PK
@@ -69,7 +70,11 @@ erDiagram
 | `moods` → `recommendations` | 1 : N | `recommendations.mood_id` | `ON DELETE CASCADE` |
 | `users` → `ratings` | 1 : N | `ratings.user_id` | `ON DELETE CASCADE` |
 | `books` → `ratings` | 1 : N | `ratings.book_id` | `ON DELETE CASCADE` |
-| `books` ↔ `moods` | M : N | через `book_moods` | `ON DELETE CASCADE` (обе стороны) |
+| `books` → `book_moods` | 1 : N | `book_moods.book_id` | `ON DELETE CASCADE` |
+| `moods` → `book_moods` | 1 : N | `book_moods.mood_id` | `ON DELETE CASCADE` |
+
+Связь «многие-ко-многим» `books` ↔ `moods` реализована через ассоциативную таблицу
+`book_moods` (две связи 1:N выше), а не прямым ребром между `books` и `moods`.
 
 ## Ограничения целостности
 
